@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>lyrX</title>
+    </head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+        :root{
+            background-color: rgb(14, 14, 14);
+            color: white;
+            font-family: Inter,Arial;
+            text-align: center;
+            font-weight: 300;
+        }
+        #intro-container {
+            border: 3px solid transparent;
+            border-color: rgb(255, 16, 195);
+            border-radius: 15px;
+            background: linear-gradient(90deg, rgb(41, 2, 31), rgb(56, 33, 70));
+            margin-top: 10px;
+            width: 50%;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            overflow: hidden;
+        }
+
+
+        h1{
+            background: linear-gradient(90deg,rgb(255, 16, 195), rgb(177, 43, 255));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 900;
+            margin-bottom: 0;
+        }
+        h2{
+            font-weight: 500;
+        }
+        #subtext{
+            margin-top: 5px;
+        }
+        #search{
+            border-radius: 15px;
+            border: solid 3px;
+            width: 40%;
+            background: rgb(27, 27, 27);
+            height: 50px;
+            border-color: transparent;
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            font-family: Inter, Arial;
+            font-size: 20px;   
+            
+        }
+        #all, #searchbtn{
+            border-radius: 15px;
+            border: solid 3px;
+            width: 5%;
+            margin-left: 10px;
+            margin-right: 10px;
+            background: rgb(27, 27, 27);
+            height: 50px;
+            border-color: transparent;
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            font-family: Inter, Arial;
+            font-size: 20px;   
+        }
+        #search::placeholder{
+            text-align: center;
+            font-weight: 200;
+            color: white;
+            opacity: 0.5;
+            font-family: Inter, Arial;
+            vertical-align: middle;
+            font-size: 16px;
+        }
+        #search:focus {
+            outline: none;
+        }
+        #content {
+            width: 100%;
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            overflow: hidden;
+        }
+        highlight[type=green]{
+            color: rgb(167, 255, 167);
+        }
+        highlight[type=yellow]{
+            color: rgb(246, 255, 167);
+        }
+        highlight[type=url]{
+            color: rgb(199, 199, 199);
+            text-decoration: underline;
+            opacity: 1;
+        }
+        #footer{
+            position: absolute;
+            bottom: 0;
+            font-size: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            opacity: 0.4;
+        }
+    </style>
+    <body>
+        <div id="intro-container"> 
+            <h1>lyrX</h1>
+            <h2 id="subtext"><highlight type="yellow">open beta</highlight> • <span id="stats"></span></h2>
+        </div>
+        <div id="content">
+            <a href="/search?q=*"><button id="all">All</button></a><input id="search" name="q" placeholder="search for songs... hint: use * for all songs"><button id="searchbtn" onclick="searchRedirect()">Search</button>
+        </div>
+        <p id="footer">All lyrics are property and copyright of their owners. All lyrics provided for educational purposes and personal use only. <a href="about"><highlight type="url">More</highlight></a></p>
+        <script>
+            function searchRedirect(){
+                const query = document.getElementById("search").value;
+                if(query === ""){ return }
+                window.location.href = `/search?q=${query}`
+            }
+            function getStats() {
+                fetch('/api/statistics')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch statistics');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        document.getElementById("stats").textContent = `${data.tracks} tracks`
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+            document.addEventListener("DOMContentLoaded", getStats)
+            document.getElementById('search').addEventListener("keydown", function (event) {
+                if (document.activeElement === document.getElementById('search') && event.key === "Enter") {
+                    event.preventDefault();
+                    searchRedirect();
+                }
+            });
+        </script>
+    </body>
+</html>
