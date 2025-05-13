@@ -28,10 +28,19 @@ def search(name: str):
                 candidate = None
                 for field in ["title", "album", "artist", "full"]:
                     value = metadata.get(field, "").lower()
-                    ratio = difflib.SequenceMatcher(None, query, value).ratio()
-                    if ratio >= 0.7:
-                        candidate = {"field": field, "ratio": ratio}
-                        break 
+
+                    if field == "artist":
+                        artists = [a.strip() for a in value.split("|")]
+                        for artist in artists:
+                            ratio = difflib.SequenceMatcher(None, query, artist).ratio()
+                            if ratio >= 0.7:
+                                candidate = {"field": field, "value": artist, "ratio": ratio}
+                                break
+                    else:
+                        ratio = difflib.SequenceMatcher(None, query, value).ratio()
+                        if ratio >= 0.7:
+                            candidate = {"field": field, "value": value, "ratio": ratio}
+                            break
                 
                 if candidate is not None:
                     results.append({

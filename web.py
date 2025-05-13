@@ -1,18 +1,30 @@
 import flask, dotenv, os, requests, werkzeug
 from parser import *
+import parser
 from search import search, all_tracks
-app = flask.Flask("lyrX")
+from flask_cors import CORS 
+app = flask.Flask(
+    "lyrX",
+    static_url_path=""
+)
+dev = False
+CORS(app)
 dotenv.load_dotenv()
-print("SPOTIFY_CLIENT_ID:", os.getenv("SPOTIFY_CLIENT_ID"))
 def get_author_pfp(author_id: str):
     pfp_path = os.path.join("profiles", f"{author_id}.png")
     return pfp_path if os.path.isfile(pfp_path) else None
+@app.before_request
+def log_request():
+    print(f"Request to: {flask.request.path}")
 
+@app.errorhandler(404)
+def not_found(e):
+    return flask.render_template("404.html", type=0), 404
 @app.route("/admin")
 def admin():
     code = flask.request.args.get('code')
     if code == os.getenv("ADMIN_KEY"):
-        return "", 501
+        return "success", 501
     else:
         return "unauthorized", 401
 
@@ -39,12 +51,13 @@ def track_api_json(id):
     else:
         json = lyrx_to_json(tr.splitlines())
         return flask.jsonify(json), 200
-
+def error(e):
+    return {"error": e}
 @app.route("/api/track/<string:id>/meta")
 def track_api_meta(id):
     tr = track(id)
     if not tr:
-        return "not found", 404
+        return error(f"track {id} not found")
     else:
         return flask.jsonify(parse_metadata(tr.splitlines()))
 
@@ -63,7 +76,10 @@ def home():
 
 @app.route("/api/statistics")
 def stats_api():
-    return flask.jsonify(stats())
+    
+    stats = parser.stats()
+    stats["dev"] = dev
+    return flask.jsonify(stats)
 
 @app.route("/assets/<string:filename>")
 def cdn(filename):
@@ -74,30 +90,62 @@ def cdn(filename):
 
 @app.route("/spotify/login")
 def spotify_login():
+    redirect = flask.request.args.get("redirect")
+    if not redirect:
+        redirect = "/app"
     return flask.redirect(
-        f"https://accounts.spotify.com/authorize?client_id={os.getenv('SPOTIFY_CLIENT_ID')}&response_type=code&redirect_uri={os.getenv('SPOTIFY_REDIRECT_URI')}&scope=user-read-currently-playing"
+        f"https://accounts.spotify.com/authorize?client_id={os.getenv('SPOTIFY_CLIENT_ID')}&response_type=code&redirect_uri={os.getenv('SPOTIFY_REDIRECT_URI')}&scope=user-read-currently-playing&redirect={redirect}"
     )
 @app.route("/api/track/<string:id>/lastfm/album")
 def album_lastfm_api(id):
-    tr = track(id)
-    if not tr:
-        return "not found", 404
-    data = parse_metadata(tr)
-    artist=data["artist"]
-    album=data["album"]
-    url = f"http://ws.audioscrobbler.com/2.0/?method=album.getInfo&album={album}&artist={artist}&api_key={os.getenv('LASTFM_API_KEY')}&format=json"
-    req = requests.get(url)
-    json = req.json()
-    resp = {
-        "title": json.get("album", {}).get("name", "unknown"),
-        "artist": json.get("album", {}).get("artist", "unknown"),
-        "image": json.get("album", {}).get("image", [{}])[2].get("#text", "unknown"),
-        "tracks": json.get("album", {}).get("tracks", {}).get("track", [])
-    }
-    return flask.jsonify(resp)
+    try:
+        
+        tr = track(id)
+        if not tr:
+            return "not found", 404
+
+        data = parse_metadata(tr)
+        artist = data["artist"].split("|")[0]
+        album = data["album"]
+
+        url = f"http://ws.audioscrobbler.com/2.0/?method=album.getInfo&album={album}&artist={artist}&api_key={os.getenv('LASTFM_API_KEY')}&format=json"
+        req = requests.get(url)
+        json_data = req.json()
+
+        if "album" not in json_data:
+            return flask.jsonify({"error": f"Album '{album}' by '' not found on Last.fm", "lastfm": json_data}), 502
+
+        images = json_data["album"].get("image", [])
+        preferred_sizes = ["extralarge", "large", "medium", "small"]
+        image_url = "unknown"
+
+        for size in preferred_sizes:
+            match = next((img for img in images if img.get("size") == size and img.get("#text")), None)
+            if match:
+                image_url = match["#text"]
+                break
+
+        resp = {
+            "title": json_data["album"].get("name", "unknown"),
+            "artist": json_data["album"].get("artist", "unknown"),
+            "image": image_url,
+            "tracks": json_data["album"].get("tracks", {}).get("track", [])
+        }
+        return flask.jsonify(resp)
+
+    except Exception as e:
+        return flask.jsonify({"error": f"{type(e).__name__}: {e}"})
+
 @app.route("/app")
 def app_web():
     return flask.render_template("app.html")
+@app.route('/favicon.ico')
+def favicon():
+    path = os.path.abspath("lyrX.png")
+    if not os.path.exists(path):
+        print("File does not exist:", path)
+        return "not found", 404
+    return flask.send_file(path, mimetype='image/png')
 @app.route("/spotify/callback")
 def spotify_callback():
     code = flask.request.args.get("code")
@@ -117,6 +165,7 @@ def spotify_callback():
     response = requests.post(token_url, headers=headers, data=data)
     token_data = response.json()
     if "access_token" in token_data:
+        return flask.render_template("callback.html", code=token_data['access_token'])
         return flask.redirect(f"/app?token={token_data['access_token']}")
     else:
         return "authorization failed", 400
@@ -135,14 +184,14 @@ def spotify_now_playing():
 def track_web(id):
     tr = track(id)
     if not tr:
-        return "not found", 404
+        return flask.render_template("404.html", type=1), 404
     data = parse_metadata(tr)
     title=data["title"]
     artist=data["artist"]
     duration=data["duration"]
     try: verified=data["verified"]
     except KeyError: verified=None
-    return flask.render_template("track.html", lyrx=tr, author=data["author"], id=id, title=title, artist=artist, duration=duration, verified=verified, author_avatar=f"/api/author/{data['author']}/avatar")
+    return flask.render_template("track.html", lyrx=tr, author=data["author"], id=id, title=title, artist=", ".join(split_artists(artist)), duration=duration, verified=verified, author_avatar=f"/api/author/{data['author']}/avatar")
 
 @app.route("/track/<string:id>/report")
 def report_web(id):
@@ -229,6 +278,7 @@ def report_api(id):
 @app.route("/author/<string:id>")
 def author_profile_web(id):
     #TODO: make author page with all of their uploads etc
+    #TODO: make authors discord accounts and allow people to upload
     return flask.render_template("author.html", id=id)
 @app.route("/api/author/<string:id>/avatar")
 def author_profile_api(id:str):
@@ -244,4 +294,5 @@ def search_web():
     return flask.render_template("search.html")
 
 if __name__ == "__main__":
-    app.run('127.0.0.1',port=5100,debug=True)
+    dev = True
+    app.run('0.0.0.0',port=5100,debug=True)

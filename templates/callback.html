@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>lyrX</title>
+    </head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+        :root{
+            background-color: rgb(14, 14, 14);
+            color: white;
+            font-family: Inter,Arial;
+            text-align: center;
+            font-weight: 300;
+        }
+        #intro-container {
+            border: 3px solid transparent;
+            border-color: rgb(255, 16, 195);
+            border-radius: 15px;
+            background: linear-gradient(90deg, rgb(41, 2, 31), rgb(56, 33, 70));
+            margin-top: 10px;
+            width: 50%;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            overflow: hidden;
+        }
+
+        ttitle, a{
+            color: rgb(188, 188, 255);
+            font-weight: 900;
+        }
+        h1{
+            background: linear-gradient(90deg,rgb(64, 255, 16), rgb(0, 255, 149));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 900;
+            margin-bottom: 0;
+        }
+        h2{
+            font-weight: 500;
+        }
+        h3{
+            font-weight: 400;
+        }
+        #subtext{
+            margin-top: 5px;
+        }
+        #search{
+            border-radius: 15px;
+            border: solid 3px;
+            width: 40%;
+            background: rgb(27, 27, 27);
+            height: 50px;
+            border-color: transparent;
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            font-family: Inter, Arial;
+            font-size: 20px;   
+            
+        }
+        #all, #searchbtn{
+            border-radius: 15px;
+            border: solid 3px;
+            width: 5%;
+            margin-left: 10px;
+            margin-right: 10px;
+            background: rgb(27, 27, 27);
+            height: 50px;
+            border-color: transparent;
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            font-family: Inter, Arial;
+            font-size: 20px;   
+        }
+        #search::placeholder{
+            text-align: center;
+            font-weight: 200;
+            color: white;
+            opacity: 0.5;
+            font-family: Inter, Arial;
+            vertical-align: middle;
+            font-size: 16px;
+        }
+        #search:focus {
+            outline: none;
+        }
+        #content {
+            width: 100%;
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            overflow: hidden;
+        }
+        highlight[type=green]{
+            color: rgb(167, 255, 167);
+        }
+        highlight[type=yellow]{
+            color: rgb(246, 255, 167);
+        }
+        highlight[type=purple]{
+            color: rgb(234, 167, 255);
+        }
+        highlight[type=url]{
+            color: rgb(199, 199, 199);
+            text-decoration: underline;
+            opacity: 1;
+        }
+        #footer{
+            position: absolute;
+            bottom: 0;
+            font-size: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            opacity: 0.4;
+        }
+        #content{
+            top: 45%;
+            left: 50%;
+            position: absolute;
+            transform: translate(-50%, -45%);
+        }
+    </style>
+    <body>
+        <div id=content">
+            <h1>Success</h1>
+            <p>Welcome, <span id="username"></span></p>
+            <a href="/search?q=*"><button id="all">All</button></a><input id="search" name="q" placeholder="search for songs... hint: use * for all songs"><button id="searchbtn" onclick="searchRedirect()">Search</button>
+        </div>
+        <script>
+            function searchRedirect(){
+                const query = document.getElementById("search").value;
+                if(query === ""){ return }
+                window.location.href = `/search?q=${query}`
+            }
+            document.getElementById('search').addEventListener("keydown", function (event) {
+                if (document.activeElement === document.getElementById('search') && event.key === "Enter") {
+                    event.preventDefault();
+                    searchRedirect();
+                }
+            });
+            function storeToken() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = `{{ code }}`;
+                if (token) {
+                    console.log("storing token...")
+                    localStorage.setItem("spotify_token", token);
+                    fetchUserProfile();
+                }
+            }
+            storeToken();
+            function fetchUserProfile() {
+                const token = localStorage.getItem("spotify_token");
+                if (!token) return;
+
+                fetch("https://api.spotify.com/v1/me", {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+                .then(response => {
+                    if (response.status === 401) {
+                    window.location.href = "/spotify/login";
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("User:", data.display_name);
+                    document.getElementById('username').textContent = data.display_name;
+                    document.getElementById('pfp').src = data.images[0]?.url || 'default-profile-image.png';
+                })
+                .catch(error => console.error("Error fetching user profile:", error));
+            }
+        </script>
+    </body>
+</html>

@@ -16,21 +16,27 @@ def post_webhook(id, title, artist, author, album, webhook_url="https://discord.
     
     payload = {"content":"<@&1355123833014845440>","embeds": [embed]}
     requests.post(webhook_url, json=payload)
-def parse_metadata(lines:dict) -> dict: # parser v3
+
+def parse_metadata(lines: list) -> dict: # parser v3
     data = {}
     for l in lines:
         ls = l.split(";")
         if not l[0].isdigit():
             try:
-                data[ls[0].lower()] = ls[1] 
+                key = ls[0].lower()
+                value = ls[1] 
+                if key == "artist" and len(value.split("|")) > 1:
+                    value = value.split("|")[0]
+                print(f"{key}: {value}")
+                data[key] = value
             except IndexError:
                 pass
-
     return data
-with open(f"../lyrics/{tid}.lyrx","r") as f:
+
+with open(f"lyrics/{tid}.lyrx","r") as f:
     data = f.readlines()
     metadata = parse_metadata(data)
     data.insert(1, "VERIFIED;0\n")
-with open(f"../lyrics/{tid}.lyrx","w") as f:
+with open(f"lyrics/{tid}.lyrx","w") as f:
     f.writelines(data)
     post_webhook(tid,metadata["title"],metadata["artist"],metadata["author"],metadata["album"])

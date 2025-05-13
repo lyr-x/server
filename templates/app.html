@@ -195,6 +195,7 @@
 
           const songTitleElement = document.getElementById("song-title");
           if (songTitleElement) {
+            document.title = data.item.name + " - lyrX"
             songTitleElement.innerHTML =
               `${data.item.name}`;
           }

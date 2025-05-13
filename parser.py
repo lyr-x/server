@@ -1,15 +1,24 @@
 import os, difflib, time, readchar, requests
-def parse_metadata(file:str) -> dict: # parser v3
+def split_artists(artists: str) -> list:
+    return artists.split("|")
+def parse_metadata(lines: list | str, single_artist: bool = False) -> dict: # parser v3.1
+    if isinstance(lines, str):
+        lines = lines.splitlines()
     data = {}
-    lines = file.splitlines()
     for l in lines:
         ls = l.split(";")
         if not l[0].isdigit():
             try:
-                data[ls[0].lower()] = ls[1] 
-            except IndexError:
+                key = ls[0].lower()
+                value = ls[1] 
+                if single_artist:
+                    if key == "artist" and len(value.split("|")) > 1:
+                        value = value.split("|")[0]
+                print(f"key {key}: value {value}")
+                data[key] = value.strip("\n")
+            except (IndexError, KeyError):
                 pass
-
+    print(f"data: {data}")
     return data
 def post_about_all_tracks():
     output_folder = "lyrics"
@@ -101,9 +110,29 @@ def lyrx_to_json(lines):
 def stats():
     data = {
         "tracks":len(os.listdir("lyrics")),
+        "version":os.getenv("VERSION")
     }
     return data
-def parse_lyrics(file_path):
+def parse_lyrics(file_path: str) -> list:
+    return lyrics_lyrx_to_list(file_path)
+
+def lines_to_list(lines: list) -> list:
+    lyrics = []
+    for line in lines:
+        if line and line[0].isdigit():
+            time_ms, lyric = line.split(";")
+            lyrics.append((int(time_ms), lyric.strip()))
+    return lyrics    
+
+def lyrics_lines_to_dict(lines: list) -> dict:
+    lyrics = {}
+    for line in lines:
+        if line and line[0].isdigit():
+            time_ms, lyric = line.split(";")
+            lyrics[int(time_ms)] = lyric.strip()
+    return lyrics    
+
+def lyrics_lyrx_to_list(file_path: str):
     lyrics = []
     with open(file_path, encoding="utf-8") as file:
         lines = file.read().splitlines()
@@ -121,14 +150,37 @@ def track(id: str):
     else:
         with open(file_path, encoding="utf-8") as file:
             return file.read().replace('\n', '\r\n')
-
-
-
+def lyrx_dict_to_lyrx(data: dict, path: str) -> None:
+    with open(path,"w") as f:
+        for k, v in data.items():
+            if isinstance(k, str):
+                f.write(f"{k.upper()};{v}\n")
+            else:
+                f.write(f"{k};{v}\n")
+def shift_lines_to_dict(lines: list, ms: int) -> dict:
+    """
+        Shifts the lyrics in a file by X miliseconds, and return the patched dict with lyrics.
+    """
+    lyr = lyrics_lines_to_dict(lines)
+    new_lyr = {}
+    for k in lyr:
+        new_key = k + ms
+        new_lyr[new_key] = lyr[k]
+    print(new_lyr)
+    return new_lyr
+def shift(file_path: str, ms) -> None:
+    """
+        Shifts the lyrics from a file by ms.
+    """
+    lines = open(file_path,"r").readlines()
+    shift = shift_lines_to_dict(lines, ms)
+    meta = parse_metadata(lines)
+    final = meta | shift
+    lyrx_dict_to_lyrx(final, file_path)
 def track(id: str):
     file_path = os.path.join("lyrics", id + ".lyrx")
     if not os.path.exists(file_path):
         return None
     else:
         return open(file_path, encoding="utf-8").read()
-if __name__ == "__main__":
-    post_about_all_tracks()
+shift("lyrics/00031.lyrx", 200)
