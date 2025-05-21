@@ -4,3 +4,4 @@ profiles
 .env
 __pycache__
 viewmap.json
+.vscode
