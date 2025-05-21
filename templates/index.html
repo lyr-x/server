@@ -19,9 +19,10 @@
             background: linear-gradient(90deg, rgb(41, 2, 31), rgb(56, 33, 70));
             margin-top: 10px;
             width: 50%;
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
+            margin: auto;
+            /* position: absolute; */
+            /* left: 50%; */
+            /* transform: translateX(-50%); */
             overflow: hidden;
         }
 
@@ -84,10 +85,12 @@
         }
         #content {
             width: 100%;
-            position: absolute;
-            top: 25%;
-            left: 50%;
-            transform: translateX(-50%);
+            /* position: absolute; */
+            /* top: 25%; */
+            /* left: 50%; */
+            /* transform: translateX(-50%); */
+            margin: auto;
+            margin-top: 25px;
             overflow: hidden;
         }
         highlight[type=green]{
@@ -126,7 +129,7 @@
             padding: 5px 15px;
             width: 20%;
             margin: auto;
-            margin-top: 75px;
+            margin-top: 200px;
             align-items: center;
         }
         #track-title{
@@ -182,8 +185,30 @@
             opacity: 0;
             transition: 300ms;
         }
+        #deprecated-warning{
+            background-color: rgb(255, 197, 36);
+            color: #000;
+            font-weight: 900;
+            margin: 0;
+            overflow: hidden;
+            width: 100%;
+            /* position: absolute; */
+            margin-bottom: 10px;
+            z-index: 1;
+        }
+        #deprecated-warning h2{
+            font-weight: 900;
+        }
     </style>
     <body>
+
+        <div id="deprecated-warning">
+            <h2>Warning</h2>
+            <p>As of 15.05.2025 (DD/MM/YYYY) this instance of lyrX (lyrx.projectxyz.dev) is now <strong>not supported</strong> and <strong>will not receive updates.</strong></p>
+            <h2>NEW WEBSITE: <a href="https://lyrx.tjf1.dev">lyrx.tjf1.dev</a></h2>
+            <p>This version of lyrX (aka "legacy") will for now remain active, but deprecated.</p>
+            <p>Shutdown of this website is plannned to occur in early June/late May.</p>
+        </div>  
         <div id="spotify-profile" class="hidden">
             <img id="pfp" width="32px" height="32px">
             <img src="https://storage.googleapis.com/pr-newsroom-wp/1/2023/05/Spotify_Primary_Logo_RGB_White.png" width="13px" height="13px"><p id="username"></p>
@@ -194,6 +219,7 @@
             <h2 id="subtext"><highlight type="yellow">open beta</highlight> • <span id="stats">__ tracks</span></h2>
         </div>
         <div id="content">
+
             <a href="/search?q=*"><button id="all">All</button></a><input id="search" name="q" placeholder="search for songs... hint: use * for all songs"><button id="searchbtn" onclick="searchRedirect()">Search</button>
             <div id="playing">
 

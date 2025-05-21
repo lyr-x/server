@@ -3,5 +3,4 @@ lyrics
 profiles
 .env
 __pycache__
-.vscode
-.mypy_cache
+viewmap.json

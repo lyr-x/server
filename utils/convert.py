@@ -2,6 +2,8 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 import requests
+
+
 def parse_lrc(lrc_path, title, artist, duration):
     lyrics = []
     with open(lrc_path, encoding="utf-8") as f:
@@ -23,10 +25,14 @@ def parse_lrc(lrc_path, title, artist, duration):
                         lyrics.append((time_ms, lyric))
     return lyrics
 
+
 def parse_metadata_to_file(title, artist, duration, full, author, album):
     return f"TITLE;{title}\nARTIST;{artist}\nDURATION;{duration}\nFULL;{full}\nAUTHOR;{author}\nALBUM;{album}"
 
-def convert_lrc_to_lyrx(lrc_file, title, artist, duration, author, full,album,output_folder="lyrics"):
+
+def convert_lrc_to_lyrx(
+    lrc_file, title, artist, duration, author, full, album, output_folder="lyrics"
+):
     lyrics = parse_lrc(lrc_file, title, artist, duration)
     metadata = parse_metadata_to_file(title, artist, duration, full, author, album)
     lyrx_lyrics = ""
@@ -40,9 +46,10 @@ def convert_lrc_to_lyrx(lrc_file, title, artist, duration, author, full,album,ou
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(lyrx_content)
         print(f"converted {lrc_file} to {output_path}")
-        post_webhook(output_id,title,artist,author,album)
+        post_webhook(output_id, title, artist, author, album)
     else:
         print(f"no lyrics found in {lrc_file}")
+
 
 def get_next_id(output_folder):
     existing_files = os.listdir(output_folder) if os.path.exists(output_folder) else []
@@ -56,68 +63,86 @@ def get_next_id(output_folder):
     next_id = max(ids, default=0) + 1
     return f"{next_id:05d}"
 
+
 def open_file_picker():
     root = tk.Tk()
     root.withdraw()
-    return filedialog.askopenfilename(title="select an lrc file", filetypes=[("LRC Files", "*.lrc")])
+    return filedialog.askopenfilename(
+        title="select an lrc file", filetypes=[("LRC Files", "*.lrc")]
+    )
+
 
 def check_if_converted(lrc_file, output_folder="lyrics"):
     file_name = os.path.basename(lrc_file)
     converted_file = os.path.splitext(file_name)[0] + ".lyrx"
     return os.path.exists(os.path.join(output_folder, converted_file))
+
+
 def post_about_all_tracks():
     output_folder = "lyrics"
     files = os.listdir(output_folder)
-    lyrx_files = [f for f in files if f.endswith('.lyrx')]
+    lyrx_files = [f for f in files if f.endswith(".lyrx")]
     tracks = []
 
     for lyrx_file in lyrx_files:
-        with open(os.path.join(output_folder, lyrx_file), 'r', encoding='utf-8') as f:
+        with open(os.path.join(output_folder, lyrx_file), "r", encoding="utf-8") as f:
             lines = f.readlines()
             metadata = {}
             for line in lines[:5]:
-                key, value = line.strip().split(';')
+                key, value = line.strip().split(";")
                 metadata[key] = value
             try:
-                tracks.append({
-                    'id': lyrx_file.split('.')[0],
-                    'title': metadata['title'],
-                    'artist': metadata['artist'],
-                    'author': metadata['author'],
-                    'album': metadata.get('album', metadata['title'])
-                })
+                tracks.append(
+                    {
+                        "id": lyrx_file.split(".")[0],
+                        "title": metadata["title"],
+                        "artist": metadata["artist"],
+                        "author": metadata["author"],
+                        "album": metadata.get("album", metadata["title"]),
+                    }
+                )
             except Exception as e:
                 print(f"in {lyrx_file}: {type(e)}: {e}")
 
     for track in tracks:
         post_webhook(
-            track['id'],
-            track['title'],
-            track['artist'],
-            track['author'],
-            track['album']
+            track["id"],
+            track["title"],
+            track["artist"],
+            track["author"],
+            track["album"],
         )
-def post_webhook(id, title, artist, author, album, webhook_url="https://discord.com/api/webhooks/1355123433582887013/o1Vmr8EPhOVT8iA0XMWlLFoofep-Cd8YJ-IUpmPuZf9S2PU43c9FIZhxhOX1tGaNr3oW"):
+
+
+def post_webhook(
+    id, title, artist, author, album, webhook_url=os.getenv("WEBHOOK_NEW_TRACK")
+):
     embed = {
-        "content":"<@&1355123833014845440>",
+        "content": "<@&1355123833014845440>",
         "title": "New Track Added",
-        "color": 0xd175ff,
+        "color": 0xD175FF,
         "fields": [
             {"name": "ID", "value": id, "inline": False},
             {"name": "Title", "value": title, "inline": True},
             {"name": "Artist", "value": artist, "inline": True},
             {"name": "Album", "value": album, "inline": True},
-            {"name": "Author", "value": author, "inline": False}
-        ]
+            {"name": "Author", "value": author, "inline": False},
+        ],
     }
-    
+
     payload = {"embeds": [embed]}
     requests.post(webhook_url, json=payload)
+
+
 def get_metadata_value(line):
-    return line[line.find(":")+1:line.rfind("]")].strip()
+    return line[line.find(":") + 1 : line.rfind("]")].strip()
+
+
 def lyricsify_scraper():
     # step 1: get album's songs
     album_url = input("album > ").strip()
+
+
 def main():
     lrc_file = open_file_picker()
     if not lrc_file:
@@ -130,7 +155,13 @@ def main():
         return
     with open(lrc_file, encoding="utf-8") as f:
         lines = f.readlines()
-    existing_metadata = [line for line in lines if line.startswith("[ti:") or line.startswith("[ar:") or line.startswith("[length:")]
+    existing_metadata = [
+        line
+        for line in lines
+        if line.startswith("[ti:")
+        or line.startswith("[ar:")
+        or line.startswith("[length:")
+    ]
     title, artist, duration = "", "", 0
     if existing_metadata:
         print("found existing metadata:")
@@ -177,6 +208,7 @@ def main():
                 print("invalid length format, expected mm:ss")
                 return
     convert_lrc_to_lyrx(lrc_file, title, artist, duration, author, full, album)
+
 
 if __name__ == "__main__":
     # main()
