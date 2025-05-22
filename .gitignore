@@ -5,3 +5,4 @@ profiles
 __pycache__
 viewmap.json
 .vscode
+venv
