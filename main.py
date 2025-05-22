@@ -7,23 +7,26 @@ from parser import track, add_view, lyrx_to_json, stats, parse_metadata, get_vie
 import parser
 from urllib.parse import quote
 from search import search, all_tracks
+
 __import__("dotenv").load_dotenv()
 app = FastAPI()
 dev = True
 
+
 def get_author_pfp(author_id: str):
     pfp_path = os.path.join("profiles", f"{author_id}.png")
     return pfp_path if os.path.isfile(pfp_path) else None
-  
+
 
 @app.get("/")
 async def root():
     return {
-        "runtime":f"running FastAPI {fastapi.__version__}",
-        "documentation":"https://lyrx.tjf1.dev/developers"
+        "runtime": f"running FastAPI {fastapi.__version__}",
+        "documentation": "https://lyrx.tjf1.dev/developers",
     }
 
-#TODO make the routes more clear
+
+# TODO make the routes more clear
 @app.get("/api/track/{track_id}/")
 async def track_api(track_id: str):
     tr = track(track_id)
@@ -31,7 +34,8 @@ async def track_api(track_id: str):
         return "not found", 404
     else:
         return fastapi.Response(tr, media_type="text/plain")
-    
+
+
 @app.get("/api/track/{track_id}/json")
 async def track_api_json(track_id: str):
     tr = track(track_id)
@@ -42,6 +46,7 @@ async def track_api_json(track_id: str):
         json = lyrx_to_json(tr.splitlines())
         return json
 
+
 @app.get("/api/statistics")
 async def stats_api():
     stats = parser.stats()
@@ -50,15 +55,16 @@ async def stats_api():
 
 
 @app.get("/api/search")
-async def search_api(q: str =  ""):
+async def search_api(q: str = ""):
     res = search(q)
     return res
+
 
 @app.get("/api/track/{track_id}/meta")
 async def track_api_meta(track_id: str):
     tr = track(track_id)
     if not tr:
-        return {"error":"track {track_id} not found"}
+        return {"error": "track {track_id} not found"}
     else:
         meta = parse_metadata(tr.splitlines())
         meta["artists"] = meta["artist"].split("|")
@@ -82,7 +88,6 @@ async def album_lastfm_api(track_id: str):
         url = f"http://ws.audioscrobbler.com/2.0/?method=album.getInfo"
         f"&album={album_encoded}&artist={artist_encoded}"
         f"&api_key={os.getenv('LASTFM_API_KEY')}&format=json"
-        
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
@@ -117,7 +122,8 @@ async def album_lastfm_api(track_id: str):
 
     except Exception as e:
         return {"error": f"{type(e).__name__}: {e}"}
-    
+
+
 @app.get("/api/author/{track_id}/avatar")
 async def author_profile_api(track_id: str):
     if track_id == None:
@@ -127,6 +133,7 @@ async def author_profile_api(track_id: str):
         return fastapi.responses.FileResponse(pfp, media_type="image/png")
     else:
         return "no profile picture found", 404
+
 
 @app.get("/favicon.ico")
 def favicon():

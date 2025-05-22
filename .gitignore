@@ -6,3 +6,4 @@ __pycache__
 viewmap.json
 .vscode
 venv
+.mypy_cache
